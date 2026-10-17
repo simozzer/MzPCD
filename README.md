@@ -92,7 +92,7 @@ out beside this one: JUCE (`..\JUCE`) and [MzPCF](https://github.com/simozzer/Mz
 GitHub builds the downloads for every release and attaches them:
 
 1. Bump the version in `CMakeLists.txt`.
-2. Write the notes in `docs/releases/v<version>.md`, ending with the copyright line, then
+2. Write the notes in `docs/releases/v<version>.md`, ending with the credit line, then
    commit both.
 3. Tag and push: `git tag -a v0.2.0 -m "MzPCD 0.2.0"`, then `git push origin main v0.2.0`.
 4. The *release* workflow builds and checks the plugin, then makes a **draft** release with
@@ -133,4 +133,4 @@ The knobs themselves are smoothed over 10 ms, so automating them doesn't zip.
 
 ## Licence
 
-Copyright (C) 2026 Simon Moscrop. Free software under the GNU AGPL v3; see [LICENSE](LICENSE).
+Created by Simon Moscrop. Free software under the GNU AGPL v3; see [LICENSE](LICENSE).

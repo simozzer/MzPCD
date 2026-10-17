@@ -14,6 +14,6 @@ VST3
 Windows may warn that the plugin is from an unknown publisher: the binaries are
 not code-signed. Choose "More info" then "Run anyway", or build from source.
 
-Copyright (C) 2026 Simon Moscrop.
+Created by Simon Moscrop.
 Free software under the GNU AGPL v3 - see LICENSE. Source code:
 https://github.com/simozzer/MzPCD/tree/v@VERSION@
