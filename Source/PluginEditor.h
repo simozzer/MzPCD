@@ -105,6 +105,9 @@ private:
     Switch rate;
     std::vector<std::unique_ptr<Knob>> levelKnobs, pushKnobs, outputKnobs;
 
+    // This version, and where to find the next: the project's page, along the title.
+    juce::HyperlinkButton projectLink;
+
     juce::Rectangle<int> face, pcdArea, outArea, levelsLabel, pushesLabel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MzPcdEditor)
