@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(MzPCD VERSION 0.2.0 LANGUAGES C CXX)
+project(MzPCD VERSION 0.3.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,6 +48,8 @@ set(VST3_DESTINATION "${VST3_DEFAULT}" CACHE PATH "Where to install the built VS
 set(MZPCD_FORMATS VST3)
 if(APPLE)
     list(APPEND MZPCD_FORMATS AU)
+elseif(UNIX)
+    list(APPEND MZPCD_FORMATS LV2)   # what Linux hosts - Ardour, Carla, Qtractor - load best
 endif()
 
 #
@@ -61,6 +63,7 @@ juce_add_plugin(MzPCD
     PRODUCT_NAME                "MzPCD"
     PLUGIN_MANUFACTURER_CODE    Smoz          # never change - see above
     PLUGIN_CODE                 Pcd1          # never change - see above
+    LV2URI                      "https://github.com/simozzer/MzPCD"   # never change - an LV2's identity
 
     # JUCE does not inherit this from project().
     VERSION                     "${PROJECT_VERSION}"
