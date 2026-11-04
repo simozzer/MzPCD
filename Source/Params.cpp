@@ -18,14 +18,16 @@ const std::vector<Spec>& specs()
         { "rate",     "Rate",     "RATE",    "How long a step is: an eighth, a sixteenth or a thirty-second note. The pattern's sixteen steps run that fast.",
           nullptr, &S::rate, { "1/8", "1/16", "1/32" } },
 
-        { "drive",    "Drive",    "DRIVE",   "How hard the sound is driven into the clipper, 0 to 36 dB. The level is made up as it goes, so it changes the colour more than the volume.",
+        { "drive",    "Drive",    "DRIVE",   "How hard the sound is driven into the distortion - ReBirth's, and its AMOUNT, 0 to 127: it starts at 70, as ReBirth's did.",
           &S::drive, nullptr, {}, 0.0f, 1.0f, Unit::Drive },
+        { "shape",    "Shape",    "SHAPE",   "The distortion's curve - ReBirth's SHAPE, 0 to 127: 0 a hard clip, as ReBirth 1.5's, and up from there ever further round its waveshaper.",
+          &S::shape, nullptr, {}, 0.0f, 1.0f, Unit::Drive },
         { "tone",     "Tone",     "TONE",    "Dark to bright: the cutoff after the clipper, 500 Hz to 12 kHz. It also sets the pitch the feedback howls at.",
           &S::tone, nullptr, {}, 0.0f, 1.0f, Unit::Tone },
         { "feedback", "Feedback", "FDBK",    "How much of the output comes round again, as a guitar amp's does through the speaker and back into the pickup. Up high it sustains, then howls - but never runs away.",
           &S::feedback },
 
-        { "driveAmount",    "Pattern Drive",    "DRIVE", "How far a full-level step pushes the drive up, on top of DRIVE: up to 36 dB more.",
+        { "driveAmount",    "Pattern Drive",    "DRIVE", "How far a full-level step pushes the drive up, on top of DRIVE: by up to 127 more, as far as ReBirth's AMOUNT goes.",
           &S::driveAmount, nullptr, {}, 0.0f, 1.0f, Unit::Push },
         { "toneAmount",     "Pattern Tone",     "TONE",  "How far a full-level step moves the tone: up to three octaves brighter, or - turned left - darker.",
           &S::toneAmount, nullptr, {}, -1.0f, 1.0f, Unit::Bipolar },
@@ -59,8 +61,8 @@ namespace
         {
             case Unit::Decibels: return (v > 0.0f ? "+" : "") + juce::String(v, 1) + " dB";
             case Unit::Percent:  return juce::String(juce::roundToInt(v * 100.0f)) + "%";
-            case Unit::Drive:    return juce::String(v * 36.0f, 1) + " dB";
-            case Unit::Push:     return "+" + juce::String(v * 36.0f, 1) + " dB";
+            case Unit::Drive:    return juce::String(juce::roundToInt(v * 127.0f));          // ReBirth's 0 to 127
+            case Unit::Push:     return "+" + juce::String(juce::roundToInt(v * 127.0f));
             case Unit::Tone:
             {
                 const double hz = 500.0 * std::pow(24.0, (double) v);

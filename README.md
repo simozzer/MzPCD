@@ -6,6 +6,10 @@ project, one of 32 patterns pushes all three from there, by as much as you choos
 So the drive can bite on the off-beats, the tone open on the fills, and the feedback swell
 into a howl on every beat and die away between.
 
+The distortion itself is ReBirth's: its AMOUNT, its SHAPE, its curves and its gains, as
+[OpenRB-338](https://github.com/pingw33n/openrb-338) decoded them. It's the same code as the
+DIST in [MzDebirth](https://github.com/simozzer/MzDebirth), which compiles it from here.
+
 ![The MzPCD panel](docs/screenshot.png)
 
 It's a sibling of [MzPCF](https://github.com/simozzer/MzPCF), the pattern-controlled
@@ -19,14 +23,17 @@ The controls:
   how hard it is pushing now.
 - **RATE** - how long a step is: 1/8, 1/16 or 1/32 of a note.
 - **LEVELS** - where the distortion sits:
-  - **DRIVE** - how hard the sound goes into the clipper, 0 to 36 dB. The level is made up
-    as it goes, so it changes the colour more than the volume.
-  - **TONE** - dark to bright, the cutoff after the clipper, 500 Hz to 12 kHz.
+  - **DRIVE** - how hard the sound goes into the distortion: ReBirth's AMOUNT, 0 to 127. It
+    starts at 70, as ReBirth's did.
+  - **SHAPE** - ReBirth's SHAPE, 0 to 127. 0 is ReBirth 1.5's hard clip; up from there the
+    curve goes ever further round ReBirth's waveshaper, from a warm bend to a folding fuzz.
+    As in ReBirth, the level isn't made up for you: a hard clip at a high AMOUNT is louder.
+  - **TONE** - dark to bright, the cutoff after the distortion, 500 Hz to 12 kHz.
   - **FDBK** - feedback, as a guitar amp's: the output comes back round, through the
     speaker's resonance, into the input. A little thickens and sustains the sound; more
     howls, at a pitch TONE sets.
 - **PATTERN PUSHES** - how far a full-level step pushes each one, from where its knob is:
-  - **DRIVE** - up to 36 dB more.
+  - **DRIVE** - up to 127 more AMOUNT, as far as ReBirth's goes.
   - **TONE** - up to three octaves brighter, or, turned left, darker.
   - **FDBK** - more feedback.
   - **DEC** - how fast each step's push dies away, 15 ms to 1.5 s.
@@ -52,9 +59,9 @@ the loop sustains itself, and the amp's own clipping holds it at a steady howl r
 letting it run away. MzPCD does the same:
 
 - **The loop:** the output goes round a 2.5 ms acoustic path, about a metre, and a speaker's
-  resonance at a quarter of TONE's cutoff (150 Hz to 2.5 kHz), back into the clipper's input.
+  resonance at a quarter of TONE's cutoff (150 Hz to 2.5 kHz), back into the distortion's input.
 - **FDBK** sets the loop's gain, up to 1.2 at the resonance.
-- **Bounded:** the clipper bounds the loop, so the howl never runs away. Turned down, it
+- **Bounded:** the distortion bounds the loop, so the howl never runs away. Turned down, it
   dies away within a moment.
 
 ## Installing
@@ -143,31 +150,39 @@ check, and keeps the zip on the run for two weeks.
 ## Layout
 
     Source/PCD/          the effect - plain C++, no JUCE
-      Pcd.h/.cpp         the clipper, tone, feedback loop, and the pattern pushing them
-      Oversampler.h      twice the rate and back, for the clipper
+      Pcd.h/.cpp         the distortion, tone, feedback loop, and the pattern pushing them
+      RebirthDist.h      ReBirth's distortion, ported from OpenRB-338; MzDebirth's DIST too (GPL v3)
+      Oversampler.h      twice the rate and back, for the distortion
       Settings.h         the front panel, in panel units
     Source/              the JUCE plugin round it: parameters, look, editor
     Tests/PcdCheck.cpp   the engine's checks; gates the plugin build
 
 ## How it works
 
-**The clipper** is a `tanh` curve with a slight lean, like a valve stage, for some even
-harmonics. The DC the lean makes is taken out after. It runs at twice the sample rate, with
-a 63-tap half-band filter going up and coming down, so its harmonics don't fold back as
-aliases. The checks hold the alias of a hard-driven 9.5 kHz sine's fifth harmonic below
-−40 dB; it measures about −67. That
-filter delays the sound by 31 samples. The plugin tells the host, and delays the dry side of
-MIX by the same, so the two never comb.
+**The distortion** is ReBirth's, ported to C++ from OpenRB-338's decoding of it
+(`Source/PCD/RebirthDist.h`):
+- **SHAPE 0** is a hard clip. AMOUNT sets the gain into it and, up to 90, how low it clips.
+- **SHAPE 1 to 127** picks one of 32 waveshaper curves, a sine bending into a straight line,
+  further round the sine the higher it goes. ReBirth's input gain follows its level curve, and
+  its output gain comes from a 5 × 5 grid over SHAPE and AMOUNT.
 
-**The level.** The output is made up so that a sound at an ordinary level, about −18 dB,
-comes out about as loud as it went in, however hard it is driven.
+The tables are built exactly as ReBirth built them, and the checks hold MzPCD's level to
+ReBirth's own unit run on the same sound.
 
-**The tone** is a two-pole low-pass after the clipper.
+It runs at twice the sample rate, with a 63-tap half-band filter going up and coming down, so
+its harmonics don't fold back as aliases, as ReBirth's did at 44.1 kHz. The checks hold the
+alias of a hard-driven 9.5 kHz sine's fifth harmonic below −40 dB. That filter delays the
+sound by 31 samples. The plugin tells the host, and delays the dry side of MIX by the same, so
+the two never comb.
+
+**The level** is ReBirth's: the output gain its grid gives, and no more.
+
+**The tone** is a two-pole low-pass after the distortion.
 
 **The pattern.** Each step strikes MzPCF's envelope to that step's level. It rises in a third
 of a millisecond and decays by DEC. Each push adds the envelope, times its amount, on top of
 its knob:
-- **drive:** in dB;
+- **drive:** in ReBirth's AMOUNT, moving smoothly where ReBirth's moved in whole steps;
 - **tone:** in octaves;
 - **feedback:** in loop gain.
 
@@ -176,3 +191,7 @@ The knobs themselves are smoothed over 10 ms, so automating them doesn't zip.
 ## Licence
 
 Created by Simon Moscrop. Free software under the GNU AGPL v3; see [LICENSE](LICENSE).
+
+`Source/PCD/RebirthDist.h` is a port of OpenRB-338's distortion, copyright (C) 2026 the
+OpenRB-338 authors, under the GNU GPL v3, which section 13 of each licence lets it be
+combined with.

@@ -22,11 +22,12 @@ struct Settings
     int   pattern  = 0;              // 0 to 31, MzPCF's patterns
     int   rate     = Rate::Sixteenth;
 
-    float drive    = 0.35f;          // 0 to 36 dB into the clipper
+    float drive    = 70.0f / 127.0f; // ReBirth's AMOUNT, 0 to 127: 70 as ReBirth starts
+    float shape    = 0.0f;           // ReBirth's SHAPE, 0 to 127: 0 its hard clip, then its waveshaper
     float tone     = 0.5f;           // dark to bright: the cutoff after it, 500 Hz to 12 kHz
     float feedback = 0.0f;           // how much of the output comes round again, as an amp's does
 
-    float driveAmount    = 0.5f;     // how far a full step pushes the drive up, 0 to 36 dB
+    float driveAmount    = 0.5f;     // how far a full step pushes the AMOUNT up, by up to 127
     float toneAmount     = 0.0f;     // -1 to +1: how far it moves the tone, down or up
     float feedbackAmount = 0.0f;     // how far it pushes the feedback up
     float decay          = 0.35f;    // how fast a step's push dies away, 15 ms to 1.5 s

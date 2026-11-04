@@ -23,16 +23,16 @@ constexpr int steps = pcf::steps;
 inline float level(int pattern, int step) { return pcf::level(pattern, step); }
 
 //
-// The pattern-controlled distortion. A clipper, run at twice the sample rate so its
-// harmonics do not alias, with a tone control after it and a feedback loop round it - and
-// the PCF's idea playing all three: on every step of the host's timeline an envelope is
-// struck to that step's level in the pattern, and pushes the drive, the tone and the
-// feedback each by its own amount, dying away by DECAY.
+// The pattern-controlled distortion. ReBirth's distortion (RebirthDist.h), run at twice the
+// sample rate so its harmonics do not alias, with a tone control after it and a feedback
+// loop round it - and the PCF's idea playing all three: on every step of the host's timeline
+// an envelope is struck to that step's level in the pattern, and pushes the drive, the tone
+// and the feedback each by its own amount, dying away by DECAY.
 //
 // The feedback is an amplifier's: the output comes back round a short acoustic path and a
 // speaker's resonance into the input. Turned up it sustains, and past a point it howls, at
-// a pitch that follows TONE. The clipper bounds the loop, as the amp's does, so it can never
-// run away.
+// a pitch that follows TONE. The distortion bounds the loop, as the amp's does, so it can
+// never run away.
 //
 class Pcd
 {

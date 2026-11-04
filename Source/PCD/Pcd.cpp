@@ -3,6 +3,8 @@
 
 #include "Pcd.h"
 
+#include "RebirthDist.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -14,18 +16,34 @@ namespace
     constexpr double pi = 3.14159265358979323846;
 
     constexpr double toneLow = 500.0, toneHigh = 12000.0;   // TONE's travel
-    constexpr double maxDriveDb = 36.0;
     constexpr double maxLoopGain = 1.2;                       // FEEDBACK at full
     constexpr double loopSeconds = 0.0025;                    // the speaker to the pickup, about a metre
     constexpr double resonanceQ = 4.0;
 
-    // A soft clipper that leans a little one way, as a valve stage does, for the even
-    // harmonics; the DC that makes is taken out after.
-    double shaper(double u)
+    //
+    // The distortion itself is ReBirth's, as OpenRB-338 decoded it (RebirthDist.h): at an
+    // AMOUNT, 0 to 127, and a SHAPE - 0 its hard clip, 1 to 127 a row of its waveshaper - with
+    // ReBirth's own gains in and out. Here AMOUNT moves smoothly, as the pattern pushes it,
+    // where ReBirth's moved in whole steps.
+    //
+    struct Curve
     {
-        constexpr double bias = 0.2;
-        return std::tanh(u + bias) - std::tanh(bias);
-    }
+        bool clip;
+        const float* row;
+        double in, out, threshold;
+
+        Curve(double amount, int shape)
+            : clip(shape == 0), row(rbdist::row(shape)),
+              in(clip ? rbdist::clipGain(amount) : rbdist::inGain(amount)),
+              out(rbdist::outGain(shape, amount)),
+              threshold(rbdist::clipThreshold(amount)) {}
+
+        double operator()(double u) const
+        {
+            if (clip) return std::clamp(in * u, -threshold, threshold);
+            return rbdist::shape(row, in * u + 128.0) * out;
+        }
+    };
 
     // A trapezoidal state-variable filter's coefficients, at a frequency and damping.
     struct Svf
@@ -100,7 +118,8 @@ void Pcd::process(float* left, float* right, int n)
     env.setDecay(s.decay);
 
     // where the knobs are heading
-    const double driveT = std::clamp(s.drive, 0.0f, 1.0f) * maxDriveDb;
+    const double driveT = std::clamp(s.drive, 0.0f, 1.0f) * 127.0;   // ReBirth's AMOUNT
+    const int shape = (int) std::lround(std::clamp(s.shape, 0.0f, 1.0f) * 127.0f);
     const double toneT = std::log2(toneLow) + std::clamp(s.tone, 0.0f, 1.0f) * std::log2(toneHigh / toneLow);
     const double feedbackT = std::clamp(s.feedback, 0.0f, 1.0f);
     const double wetT = std::clamp(s.mix, 0.0f, 1.0f);
@@ -111,7 +130,7 @@ void Pcd::process(float* left, float* right, int n)
         settled = true;
     }
 
-    const double driveAmount = std::clamp(s.driveAmount, 0.0f, 1.0f) * maxDriveDb;
+    const double driveAmount = std::clamp(s.driveAmount, 0.0f, 1.0f) * 127.0;
     const double toneAmount = std::clamp(s.toneAmount, -1.0f, 1.0f) * 3.0;   // octaves
     const double feedbackAmount = std::clamp(s.feedbackAmount, 0.0f, 1.0f);
 
@@ -136,14 +155,9 @@ void Pcd::process(float* left, float* right, int n)
         out      += (outT - out) * smoothCoef;
 
         // the pattern's push on each, on top of the knob
-        const double gain = std::pow(10.0, std::min(maxDriveDb + 12.0, drive + driveAmount * e) / 20.0);
+        const Curve curve(std::clamp(drive + driveAmount * e, 0.0, 127.0), shape);
         const double toneHz = std::exp2(std::clamp(toneOct + toneAmount * e, std::log2(200.0), std::log2(16000.0)));
         const double loopGain = std::clamp(feedback + feedbackAmount * e, 0.0, 1.0) * maxLoopGain;
-
-        // Level made up as the drive goes up, so DRIVE changes the colour more than the volume:
-        // a sound at an ordinary level, about -18 dB, comes out about as loud as it went in.
-        constexpr double reference = 0.12;
-        const double makeup = reference / std::max(1.0e-4, std::fabs(shaper(reference * gain)));
 
         const Svf tone(toneHz, fs, 1.4142);
         const Svf speaker(howlFrequency(toneHz), fs, 1.0 / resonanceQ);
@@ -157,15 +171,15 @@ void Pcd::process(float* left, float* right, int n)
             // the clipper, at twice the rate, with what came back round the loop
             double a, b;
             ch.os.upsample((double) x + ch.comingBack, a, b);
-            const double clipped = ch.os.downsample(shaper(a * gain), shaper(b * gain));
+            const double clipped = ch.os.downsample(curve(a), curve(b));
 
-            // the DC the lean makes, out; then the tone
+            // any DC out, the feedback's; then the tone
             const double dc = clipped - ch.dcX + dcCoef * ch.dcY;
             ch.dcX = clipped;
             ch.dcY = dc;
             double low = 0.0;
             tone.run(dc, ch.lp1, ch.lp2, low);
-            const double wetSide = low * makeup;
+            const double wetSide = low;   // ReBirth's own gain out, no more
 
             // round the loop: the output, a moment later, through the speaker's resonance
             const double heard = ch.loop[(size_t) ch.loopPos];

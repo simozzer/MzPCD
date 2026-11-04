@@ -239,7 +239,7 @@ MzPcdEditor::MzPcdEditor(MzPcdProcessor& p)
     addAndMakeVisible(projectLink);
     addAndMakeVisible(rate);
 
-    for (const char* id : { "drive", "tone", "feedback" })
+    for (const char* id : { "drive", "shape", "tone", "feedback" })
         levelKnobs.push_back(std::make_unique<Knob>(p.state, params::spec(id)));
     for (const char* id : { "driveAmount", "toneAmount", "feedbackAmount", "decay" })
         pushKnobs.push_back(std::make_unique<Knob>(p.state, params::spec(id)));
@@ -248,7 +248,7 @@ MzPcdEditor::MzPcdEditor(MzPcdProcessor& p)
     for (auto* group : { &levelKnobs, &pushKnobs, &outputKnobs })
         for (auto& k : *group) addAndMakeVisible(*k);
 
-    setSize(910, 186);
+    setSize(966, 186);
     timerCallback();   // opened showing the pattern, not after the first tick
     startTimerHz(30);
 }

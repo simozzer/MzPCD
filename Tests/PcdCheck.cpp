@@ -16,6 +16,7 @@
 #define _CRT_SECURE_NO_WARNINGS   // fopen, for the demo renders
 
 #include "Pcd.h"
+#include "RebirthDist.h"
 
 #include <algorithm>
 #include <chrono>
@@ -157,7 +158,31 @@ void driveCheck()
     const double high = thd(y, 9600, 19200);
     const double level = 20.0 * std::log10(rms(y, 9600, 19200) / rms(in, 9600, 19200));
     check(high > 0.25, "driven hard: heavily distorted", fmt("%.0f%% THD", high * 100.0));
-    check(std::fabs(level) < 9.0, "and not much louder, made up for", fmt("%+.1f dB", level));
+
+    // ReBirth's level, not made up: SHAPE 0 clips square at its threshold for the AMOUNT
+    const double square = rms(y, 9600, 19200) / rbdist::clipThreshold(127.0);
+    check(std::fabs(square - 1.0) < 0.1, "SHAPE 0: ReBirth's hard clip, at its threshold",
+          fmt("%+.1f dB in, rms %.2f of the threshold", level, square));
+
+    // and SHAPE up, ReBirth's waveshaper: as loud as ReBirth's own unit makes the same sound,
+    // at a hard drive and a light one, TONE open - within the little the oversampling and TONE
+    // take off the top, where ReBirth's folded back down
+    for (const auto [shape, amount] : { std::pair { 64, 127 }, std::pair { 100, 30 }, std::pair { 8, 70 } })
+    {
+        s.shape = (float) shape / 127.0f;
+        s.drive = (float) amount / 127.0f;
+        const auto loud = sine(48000, 1000.0, 0.3);
+        y = through(s, loud);
+        auto ref = loud;
+        rbdist::Distortion unit;
+        unit.prepare(48000.0);
+        unit.process(ref.data(), (int) ref.size(), amount, shape);
+        const double db = 20.0 * std::log10(rms(y, 9600, 19200) / rms(ref, 9600, 19200));
+        check(std::fabs(db) < 2.0 && thd(y, 9600, 19200) > 0.05,
+              shape == 64 ? "SHAPE 64, AMOUNT 127: ReBirth's waveshaper, as loud as ReBirth's"
+                          : shape == 100 ? "SHAPE 100, AMOUNT 30: the same" : "SHAPE 8, AMOUNT 70: the same",
+              fmt("%+.2f dB from ReBirth's, %.0f%% THD", db, thd(y, 9600, 19200) * 100.0));
+    }
 
     // the pattern: pattern 1 strikes the beats; between them, clean again
     s = clean();
